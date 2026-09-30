@@ -1,7 +1,6 @@
 package server
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -11,9 +10,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func NewServer() {
+type Server struct {
+	port   string
+	router *chi.Mux
+}
+
+func NewServer() *Server {
 	if err := godotenv.Load(); err != nil {
-		slog.Info("using default enviroment")
+		slog.Info(".env-file not found using default settings")
 	}
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
@@ -25,10 +29,14 @@ func NewServer() {
 	r.Use(middleware.Recoverer)
 
 	r.Handle("/*", http.FileServer(http.Dir("./web")))
-
-	addr := ":" + port
-	slog.Info("Сервер запущен", slog.String("addr", "http://localhost"+addr))
-	if err := http.ListenAndServe(addr, r); err != nil {
-		log.Fatalf("ошибка запуска сервера: %v", err)
+	return &Server{
+		port:   port,
+		router: r,
 	}
+}
+
+func (s *Server) Start() error {
+	addr := ":" + s.port
+	slog.Info("Сервер запущен", slog.String("addr", "http://localhost"+addr))
+	return http.ListenAndServe(addr, s.router)
 }
