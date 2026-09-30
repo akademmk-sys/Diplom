@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	err := db.Init("schedular.db")
+	err := db.Init("scheduler.db")
 	if err != nil {
 		log.Fatalf("db init error:%v", err)
 	}
