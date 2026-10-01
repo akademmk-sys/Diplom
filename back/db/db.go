@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"os"
 
 	_ "modernc.org/sqlite"
@@ -23,10 +24,14 @@ var db *sql.DB
 
 func Init(dbFile string) error {
 	var install bool
-	if _, err := os.Stat(dbFile); err != nil {
+	_, err := os.Stat(dbFile)
+	switch {
+	case errors.Is(err, os.ErrNotExist):
 		install = true
+	case err != nil:
+		return err
 	}
-	var err error
+
 	db, err = sql.Open("sqlite", dbFile)
 	if err != nil {
 		return err
