@@ -14,6 +14,22 @@ func afterNow(now, after time.Time) bool {
 	after = time.Date(after.Year(), after.Month(), after.Day(), 0, 0, 0, 0, after.Location())
 	return after.After(now)
 }
+func isAllowedMDay(date time.Time, targetDay int) bool {
+	day := date.Day()
+
+	if targetDay > 0 {
+		return day == targetDay
+	}
+	firstDay := time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
+	if targetDay == -1 {
+		return day == firstDay.AddDate(0, 0, -1).Day()
+	}
+	if targetDay == -2 {
+		return day == firstDay.AddDate(0, 0, -2).Day()
+	}
+	return false
+}
+
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	date, err := time.Parse(dateFormat, dstart)
 	if err != nil {
@@ -75,15 +91,61 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			date = date.AddDate(0, 0, 1)
 		}
 	case "m":
-		if len(ruleParts) < 2 || len(ruleParts) > 3 {
-			return "", errors.New("wrong m-repeat rule")
+		monthError := errors.New("wrong m-repeat rule")
+		if len(ruleParts) < 2 || len(ruleParts) > 3 || ruleParts[1] == "" {
+			return "", monthError
 		}
-		switch len(ruleParts) {
-		case 2:
-			alwdDays := strings.Split(ruleParts[1], ",")
-		case 3:
-			alwdDays := strings.Split(ruleParts[1], ",")
+		dayStr := strings.Split(ruleParts[1], ",")
+		targetDay := make([]int, 0, len(dayStr))
+		for _, v := range dayStr {
+			day, err := strconv.Atoi(v)
+			if err != nil {
+				return "", err
+			}
+			if (day < 1 || day > 31) && day != -1 && day != -2 {
+				return "", monthError
+			}
+			targetDay = append(targetDay, day)
 		}
+
+		targetMonth := make(map[int]bool)
+		if len(ruleParts) == 3 {
+			if ruleParts[2] == "" {
+				return "", monthError
+			}
+			monthStr := strings.Split(ruleParts[2], ",")
+			for _, val := range monthStr {
+				mth, err := strconv.Atoi(val)
+				if err != nil {
+					return "", err
+				}
+				if mth < 1 || mth > 12 {
+					return "", monthError
+				}
+				targetMonth[mth] = true
+			}
+		}
+		for {
+			currentMonth := int(date.Month())
+
+			if len(targetMonth) > 0 && !targetMonth[currentMonth] {
+				date = time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
+				continue
+			}
+			dayOk := false
+			for _, tDay := range targetDay {
+				if isAllowedMDay(date, tDay) {
+					dayOk = true
+					break
+				}
+			}
+			if dayOk && afterNow(now, date) {
+				break
+			}
+			date = date.AddDate(0, 0, 1)
+		}
+	default:
+		return "", errors.New("unknown rule")
 	}
 	return date.Format(dateFormat), nil
 }
