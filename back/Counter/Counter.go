@@ -1,4 +1,4 @@
-package date
+package Counter
 
 import (
 	"errors"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-const dateFormat = "20060102"
+const DateFormat = "20060102"
 
 func afterNow(now, after time.Time) bool {
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
@@ -31,7 +31,7 @@ func isAllowedMDay(date time.Time, targetDay int) bool {
 }
 
 func NextDate(now time.Time, dstart string, repeat string) (string, error) {
-	date, err := time.Parse(dateFormat, dstart)
+	date, err := time.Parse(DateFormat, dstart)
 	if err != nil {
 		return "", err
 	}
@@ -171,5 +171,5 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 	default:
 		return "", errors.New("unknown rule")
 	}
-	return date.Format(dateFormat), nil
+	return date.Format(DateFormat), nil
 }
