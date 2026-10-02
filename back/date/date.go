@@ -46,6 +46,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if len(ruleParts) != 2 {
 			return "", errors.New("wrong d-repeat rule")
 		}
+
 		nDays, err := strconv.Atoi(ruleParts[1])
 		if err != nil {
 			return "", err
@@ -53,6 +54,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if nDays < 1 || nDays > 400 {
 			return "", errors.New("invalid day count parametr")
 		}
+
 		for !afterNow(now, date) {
 			date = date.AddDate(0, 0, nDays)
 		}
@@ -60,26 +62,35 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		if len(ruleParts) != 1 {
 			return "", errors.New("wrong y-repeat rule")
 		}
+
 		for !afterNow(now, date) {
 			date = date.AddDate(1, 0, 0)
 		}
 	case "w":
 		weekError := errors.New("wrong w-repeat rule")
+
 		if len(ruleParts) != 2 {
 			return "", weekError
 		}
+
 		if ruleParts[1] == "" {
 			return "", weekError
 		}
+
 		daysStr := strings.Split(ruleParts[1], ",")
 		avlDays := make(map[int]bool)
+
 		for _, wd := range daysStr {
 			avlday, err := strconv.Atoi(wd)
-			if err != nil || avlday < 1 || avlday > 7 {
+			if err != nil {
+				return "", err
+			}
+			if avlday < 1 || avlday > 7 {
 				return "", weekError
 			}
 			avlDays[avlday] = true
 		}
+
 		for {
 			dayOfWeek := int(date.Weekday())
 			if dayOfWeek == 0 {
@@ -90,13 +101,17 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			}
 			date = date.AddDate(0, 0, 1)
 		}
+
 	case "m":
 		monthError := errors.New("wrong m-repeat rule")
+
 		if len(ruleParts) < 2 || len(ruleParts) > 3 || ruleParts[1] == "" {
 			return "", monthError
 		}
+
 		dayStr := strings.Split(ruleParts[1], ",")
 		targetDay := make([]int, 0, len(dayStr))
+
 		for _, v := range dayStr {
 			day, err := strconv.Atoi(v)
 			if err != nil {
@@ -109,11 +124,15 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 		}
 
 		targetMonth := make(map[int]bool)
+
 		if len(ruleParts) == 3 {
+
 			if ruleParts[2] == "" {
 				return "", monthError
 			}
+
 			monthStr := strings.Split(ruleParts[2], ",")
+
 			for _, val := range monthStr {
 				mth, err := strconv.Atoi(val)
 				if err != nil {
@@ -125,6 +144,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				targetMonth[mth] = true
 			}
 		}
+
 		for {
 			currentMonth := int(date.Month())
 
@@ -132,16 +152,20 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				date = time.Date(date.Year(), date.Month()+1, 1, 0, 0, 0, 0, date.Location())
 				continue
 			}
+
 			dayOk := false
+
 			for _, tDay := range targetDay {
 				if isAllowedMDay(date, tDay) {
 					dayOk = true
 					break
 				}
 			}
+
 			if dayOk && afterNow(now, date) {
 				break
 			}
+
 			date = date.AddDate(0, 0, 1)
 		}
 	default:
