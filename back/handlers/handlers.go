@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"Diplom/back/Counter"
+	counter "Diplom/back/Counter"
 	"net/http"
 	"time"
 
@@ -18,13 +18,13 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 		nowTime = time.Now()
 	} else {
 		var err error
-		nowTime, err = time.Parse(Counter.DateFormat, now)
+		nowTime, err = time.Parse(counter.DateFormat, now)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	newDate, err := Counter.NextDate(nowTime, date, rule)
+	newDate, err := counter.NextDate(nowTime, date, rule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

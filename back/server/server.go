@@ -1,6 +1,7 @@
 package server
 
 import (
+	"Diplom/back/handlers"
 	"log/slog"
 	"net/http"
 	"os"
@@ -28,11 +29,13 @@ func NewServer() *Server {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
+	handlers.Init(r)
 	r.Handle("/*", http.FileServer(http.Dir("./web")))
 	return &Server{
 		port:   port,
 		router: r,
 	}
+
 }
 
 func (s *Server) Start() error {

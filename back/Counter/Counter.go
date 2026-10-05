@@ -1,4 +1,4 @@
-package Counter
+package counter
 
 import (
 	"errors"
@@ -10,8 +10,8 @@ import (
 const DateFormat = "20060102"
 
 func afterNow(now, after time.Time) bool {
-	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
-	after = time.Date(after.Year(), after.Month(), after.Day(), 0, 0, 0, 0, after.Location())
+	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+	after = time.Date(after.Year(), after.Month(), after.Day(), 0, 0, 0, 0, time.UTC)
 	return after.After(now)
 }
 func isAllowedMDay(date time.Time, targetDay int) bool {
@@ -55,16 +55,30 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			return "", errors.New("invalid day count parametr")
 		}
 
-		for !afterNow(now, date) {
+		for {
 			date = date.AddDate(0, 0, nDays)
+			if afterNow(now, date) {
+				break
+			}
 		}
 	case "y":
 		if len(ruleParts) != 1 {
 			return "", errors.New("wrong y-repeat rule")
 		}
 
-		for !afterNow(now, date) {
-			date = date.AddDate(1, 0, 0)
+		for {
+			if date.Month() == time.February && date.Day() == 29 {
+				date = date.AddDate(1, 0, 0)
+				if date.Month() == time.February && date.Day() == 28 {
+					date = time.Date(date.Year(), time.March, 1, 0, 0, 0, 0, time.UTC)
+				}
+			} else {
+				date = date.AddDate(1, 0, 0)
+			}
+
+			if afterNow(now, date) {
+				break
+			}
 		}
 	case "w":
 		weekError := errors.New("wrong w-repeat rule")
