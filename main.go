@@ -25,6 +25,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("db init error:%v", err)
 	}
+	defer db.DB.Close()
 	srv := server.NewServer()
 
 	if err := srv.Start(); err != nil {

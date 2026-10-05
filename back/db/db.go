@@ -20,7 +20,7 @@ CREATE TABLE scheduler(
 CREATE INDEX scheduler_date ON scheduler (date);
 `
 
-var db *sql.DB
+var DB *sql.DB
 
 func Init(dbFile string) error {
 	var install bool
@@ -32,12 +32,12 @@ func Init(dbFile string) error {
 		return err
 	}
 
-	db, err = sql.Open("sqlite", dbFile)
+	DB, err = sql.Open("sqlite", dbFile)
 	if err != nil {
 		return err
 	}
 	if install {
-		if _, err := db.Exec(schema); err != nil {
+		if _, err := DB.Exec(schema); err != nil {
 			return err
 		}
 	}

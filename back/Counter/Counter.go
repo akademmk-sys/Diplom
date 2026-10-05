@@ -1,4 +1,4 @@
-package Counter
+package counter
 
 import (
 	"errors"
@@ -9,7 +9,7 @@ import (
 
 const DateFormat = "20060102"
 
-func afterNow(now, after time.Time) bool {
+func AfterNow(now, after time.Time) bool {
 	now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	after = time.Date(after.Year(), after.Month(), after.Day(), 0, 0, 0, 0, time.UTC)
 	return after.After(now)
@@ -57,7 +57,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 
 		for {
 			date = date.AddDate(0, 0, nDays)
-			if afterNow(now, date) {
+			if AfterNow(now, date) {
 				break
 			}
 		}
@@ -76,7 +76,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				date = date.AddDate(1, 0, 0)
 			}
 
-			if afterNow(now, date) {
+			if AfterNow(now, date) {
 				break
 			}
 		}
@@ -110,7 +110,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 			if dayOfWeek == 0 {
 				dayOfWeek = 7
 			}
-			if avlDays[dayOfWeek] && afterNow(now, date) {
+			if avlDays[dayOfWeek] && AfterNow(now, date) {
 				break
 			}
 			date = date.AddDate(0, 0, 1)
@@ -176,7 +176,7 @@ func NextDate(now time.Time, dstart string, repeat string) (string, error) {
 				}
 			}
 
-			if dayOk && afterNow(now, date) {
+			if dayOk && AfterNow(now, date) {
 				break
 			}
 
