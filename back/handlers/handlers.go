@@ -79,7 +79,7 @@ func checkDate(task *db.Task) error {
 			return errors.New("invalid repeat rule: " + err.Error())
 		}
 	}
-	if counter.AfterNow(now, t) {
+	if counter.AfterNow(t, now) {
 		if len(task.Repeat) == 0 {
 			task.Date = now.Format(counter.DateFormat)
 		} else {
