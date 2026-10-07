@@ -1,7 +1,7 @@
 package db
 
 import (
-	"Diplom/back/counter"
+	"Diplom/back/dCounter"
 	"database/sql"
 	"time"
 )
@@ -62,7 +62,7 @@ func SearchTaskByKey(key string) ([]*Task, error) {
 	date, err := time.Parse("02.01.2006", key)
 	if err == nil {
 		query = `SELECT * FROM scheduler WHERE date=:date ORDER BY date `
-		searchKey := date.Format(counter.DateFormat)
+		searchKey := date.Format(dCounter.DateFormat)
 		searchParam = sql.Named("date", searchKey)
 
 	} else {

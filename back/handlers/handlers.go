@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"Diplom/back/counter"
+	"Diplom/back/dCounter"
 	"Diplom/back/db"
 	"encoding/json/v2"
 	"errors"
@@ -23,13 +23,13 @@ func nextDayHandler(w http.ResponseWriter, r *http.Request) {
 		nowTime = time.Now()
 	} else {
 		var err error
-		nowTime, err = time.Parse(counter.DateFormat, now)
+		nowTime, err = time.Parse(dCounter.DateFormat, now)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 	}
-	newDate, err := counter.NextDate(nowTime, date, rule)
+	newDate, err := dCounter.NextDate(nowTime, date, rule)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -76,23 +76,23 @@ func checkDate(task *db.Task) error {
 	nowRaw := time.Now()
 	now := time.Date(nowRaw.Year(), nowRaw.Month(), nowRaw.Day(), 0, 0, 0, 0, time.UTC)
 	if task.Date == "" {
-		task.Date = now.Format(counter.DateFormat)
+		task.Date = now.Format(dCounter.DateFormat)
 	}
-	t, err := time.Parse(counter.DateFormat, task.Date)
+	t, err := time.Parse(dCounter.DateFormat, task.Date)
 	if err != nil {
 		return errors.New("invalid date format")
 	}
 	t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 	var next string
 	if len(task.Repeat) > 0 {
-		next, err = counter.NextDate(now, task.Date, task.Repeat)
+		next, err = dCounter.NextDate(now, task.Date, task.Repeat)
 		if err != nil {
 			return errors.New("invalid repeat rule: " + err.Error())
 		}
 	}
-	if counter.AfterNow(t, now) {
+	if dCounter.AfterNow(t, now) {
 		if len(task.Repeat) == 0 {
-			task.Date = now.Format(counter.DateFormat)
+			task.Date = now.Format(dCounter.DateFormat)
 		} else {
 			task.Date = next
 		}
