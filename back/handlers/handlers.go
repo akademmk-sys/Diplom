@@ -139,7 +139,14 @@ type Tasks struct {
 }
 
 func tasksHandler(w http.ResponseWriter, r *http.Request) {
-	tasks, err := db.Tasks(20)
+	key := r.URL.Query().Get("search")
+	var tasks []*db.Task
+	var err error
+	if key != "" {
+		tasks, err = db.SearchTaskByKey(key)
+	} else {
+		tasks, err = db.Tasks(20)
+	}
 	if err != nil {
 		writeError(w, "Ошибка получения записи "+err.Error(), http.StatusInternalServerError)
 		return
