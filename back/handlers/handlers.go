@@ -61,6 +61,17 @@ func writeError(w http.ResponseWriter, errText string, errCode int) {
 	w.Write(data)
 }
 
+func writeJSON(w http.ResponseWriter, data any) {
+	respBytes, err := json.Marshal(data)
+	if err != nil {
+		writeError(w, "Ошибка сериализации ответа: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write(respBytes)
+}
+
 func checkDate(task *db.Task) error {
 	nowRaw := time.Now()
 	now := time.Date(nowRaw.Year(), nowRaw.Month(), nowRaw.Day(), 0, 0, 0, 0, time.UTC)
@@ -89,7 +100,7 @@ func checkDate(task *db.Task) error {
 	return nil
 }
 
-func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
+func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		writeError(w, "Ошибка чтения запроса: "+err.Error(), http.StatusBadRequest)
@@ -120,17 +131,30 @@ func AddTaskHandler(w http.ResponseWriter, r *http.Request) {
 	resp := IdResponse{
 		ID: strconv.Itoa(id),
 	}
-	respBytes, err := json.Marshal(resp)
+	writeJSON(w, resp)
+}
+
+type Tasks struct {
+	Tasks []*db.Task `json:"tasks"`
+}
+
+func tasksHandler(w http.ResponseWriter, r *http.Request) {
+	tasks, err := db.Tasks(20)
 	if err != nil {
-		writeError(w, "Ошибка сериализации ответа: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, "Ошибка получения записи "+err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(respBytes)
+	if tasks == nil {
+		tasks = []*db.Task{}
+	}
+	resp := Tasks{
+		Tasks: tasks,
+	}
+	writeJSON(w, resp)
 }
 
 func Init(r *chi.Mux) {
 	r.Get("/api/nextdate", nextDayHandler)
-	r.Post("/api/task", AddTaskHandler)
+	r.Post("/api/task", addTaskHandler)
+	r.Get("/api/tasks", tasksHandler)
 }
