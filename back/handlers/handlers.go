@@ -3,6 +3,7 @@ package handlers
 import (
 	"Diplom/back/dCounter"
 	"Diplom/back/db"
+	"database/sql"
 	"encoding/json/v2"
 	"errors"
 	"io"
@@ -78,11 +79,11 @@ func checkDate(task *db.Task) error {
 	if task.Date == "" {
 		task.Date = now.Format(dCounter.DateFormat)
 	}
-	t, err := time.Parse(dCounter.DateFormat, task.Date)
+	date, err := time.Parse(dCounter.DateFormat, task.Date)
 	if err != nil {
 		return errors.New("invalid date format")
 	}
-	t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
+	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 	var next string
 	if len(task.Repeat) > 0 {
 		next, err = dCounter.NextDate(now, task.Date, task.Repeat)
@@ -90,7 +91,7 @@ func checkDate(task *db.Task) error {
 			return errors.New("invalid repeat rule: " + err.Error())
 		}
 	}
-	if dCounter.AfterNow(t, now) {
+	if dCounter.AfterNow(date, now) {
 		if len(task.Repeat) == 0 {
 			task.Date = now.Format(dCounter.DateFormat)
 		} else {
@@ -124,7 +125,7 @@ func addTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := db.AddTask(&task)
 	if err != nil {
-		writeError(w, "Ошибка обавления задачи в БД: "+err.Error(), http.StatusInternalServerError)
+		writeError(w, "Ошибка добавления задачи в БД: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -160,8 +161,58 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, resp)
 }
 
+func taskIdHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeError(w, "Не указан id", http.StatusBadRequest)
+		return
+	}
+	task, err := db.GetTask(id)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, "Запись не найдена", http.StatusBadRequest)
+			return
+		}
+		writeError(w, "server error", http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, task)
+}
+
+func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, "Ошибка чтения запроса "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
+
+	var task db.Task
+	err = json.Unmarshal(body, &task)
+	if err != nil {
+		writeError(w, "Ошибка десериализации JSON: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if task.Title == "" {
+		writeError(w, "Заголовок не может быть пустым", http.StatusBadRequest)
+		return
+	}
+	if err := checkDate(&task); err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = db.UpdateTask(&task)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, struct{}{})
+}
 func Init(r *chi.Mux) {
 	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", addTaskHandler)
 	r.Get("/api/tasks", tasksHandler)
+	r.Get("/api/task", taskIdHandler)
+	r.Put("/api/task", updateTaskHandler)
 }

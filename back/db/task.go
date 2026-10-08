@@ -3,6 +3,7 @@ package db
 import (
 	"Diplom/back/dCounter"
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -88,4 +89,39 @@ func SearchTaskByKey(key string) ([]*Task, error) {
 		return nil, err
 	}
 	return tasks, nil
+}
+
+func GetTask(id string) (*Task, error) {
+	query := `SELECT * FROM scheduler WHERE id=:id`
+	task := &Task{}
+	res := DB.QueryRow(query,
+		sql.Named("id", id),
+	)
+	err := res.Scan(&task.ID, &task.Date, &task.Title, &task.Comment, &task.Repeat)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
+func UpdateTask(task *Task) error {
+	query := `UPDATE scheduler SET date=:date, title=:title, comment=:comment, repeat=:repeat WHERE id=:id`
+	res, err := DB.Exec(query,
+		sql.Named("date", task.Date),
+		sql.Named("title", task.Title),
+		sql.Named("comment", task.Comment),
+		sql.Named("repeat", task.Repeat),
+		sql.Named("id", task.ID),
+	)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("неверный id")
+	}
+	return nil
 }
