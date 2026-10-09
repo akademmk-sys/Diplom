@@ -34,7 +34,7 @@ func AddTask(task *Task) (int, error) {
 	return int(id), nil
 }
 
-func Tasks(n int) ([]*Task, error) {
+func GetTasks(n int) ([]*Task, error) {
 	query := `SELECT * FROM scheduler ORDER BY date LIMIT :queue`
 	res, err := DB.Query(query,
 		sql.Named("queue", n),
@@ -116,6 +116,44 @@ func UpdateTask(task *Task) error {
 	if err != nil {
 		return err
 	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("неверный id")
+	}
+	return nil
+}
+
+func DeleteTask(id string) error {
+	query := `DELETE FROM scheduler WHERE id=:id`
+	res, err := DB.Exec(query,
+		sql.Named("id", id),
+	)
+	if err != nil {
+		return err
+	}
+	count, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("неверный id")
+	}
+	return nil
+}
+
+func UpdateDate(nextDate string, id string) error {
+	query := `UPDATE scheduler SET date=:date WHERE id=:id`
+	res, err := DB.Exec(query,
+		sql.Named("date", nextDate),
+		sql.Named("id", id),
+	)
+	if err != nil {
+		return err
+	}
+
 	count, err := res.RowsAffected()
 	if err != nil {
 		return err

@@ -48,6 +48,14 @@ type IdResponse struct {
 	ID string `json:"id"`
 }
 
+type Password struct {
+	Password string `json:"password"`
+}
+
+type Token struct {
+	Token string `json:"token"`
+}
+
 func writeError(w http.ResponseWriter, errText string, errCode int) {
 
 	resp := ErrorResponse{Error: errText}
@@ -146,7 +154,7 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 	if key != "" {
 		tasks, err = db.SearchTaskByKey(key)
 	} else {
-		tasks, err = db.Tasks(20)
+		tasks, err = db.GetTasks(20)
 	}
 	if err != nil {
 		writeError(w, "Ошибка получения записи "+err.Error(), http.StatusInternalServerError)
@@ -164,14 +172,14 @@ func tasksHandler(w http.ResponseWriter, r *http.Request) {
 func taskIdHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		writeError(w, "Не указан id", http.StatusBadRequest)
+		writeError(w, "не указан id", http.StatusBadRequest)
 		return
 	}
 	task, err := db.GetTask(id)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			writeError(w, "Запись не найдена", http.StatusBadRequest)
+			writeError(w, "запись не найдена", http.StatusBadRequest)
 			return
 		}
 		writeError(w, "server error", http.StatusInternalServerError)
@@ -209,10 +217,69 @@ func updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, struct{}{})
 }
+
+func doneTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeError(w, "не указан id", http.StatusBadRequest)
+		return
+	}
+	task, err := db.GetTask(id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, "запись не найдена", http.StatusBadRequest)
+			return
+		}
+		writeError(w, "server error", http.StatusInternalServerError)
+		return
+	}
+	if task.Repeat == "" {
+		err := db.DeleteTask(id)
+		if err != nil {
+			writeError(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, struct{}{})
+		return
+	}
+	now := time.Now()
+	newDate, err := dCounter.NextDate(now, task.Date, task.Repeat)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	err = db.UpdateDate(newDate, id)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	writeJSON(w, struct{}{})
+}
+
+func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
+	id := r.URL.Query().Get("id")
+	if id == "" {
+		writeError(w, "не указан id", http.StatusBadRequest)
+		return
+	}
+	err := db.DeleteTask(id)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, struct{}{})
+}
+func signinHandler(w http.ResponseWriter, r *http.Request) {
+
+}
 func Init(r *chi.Mux) {
+	r.Post("api/signin", signinHandler)
 	r.Get("/api/nextdate", nextDayHandler)
 	r.Post("/api/task", addTaskHandler)
 	r.Get("/api/tasks", tasksHandler)
 	r.Get("/api/task", taskIdHandler)
 	r.Put("/api/task", updateTaskHandler)
+	r.Post("/api/task/done", doneTaskHandler)
+	r.Delete("/api/task", deleteTaskHandler)
 }
