@@ -13,7 +13,7 @@ import (
 func main() {
 
 	if err := godotenv.Load(); err != nil {
-		slog.Info(".env файл не найден, используются дефолтные настройки")
+		slog.Info(".env-file not found in default path")
 	}
 
 	dbFile := os.Getenv("TODO_DBFILE")

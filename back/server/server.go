@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/joho/godotenv"
 )
 
 type Server struct {
@@ -17,9 +16,6 @@ type Server struct {
 }
 
 func NewServer() *Server {
-	if err := godotenv.Load(); err != nil {
-		slog.Info(".env-file not found using default settings")
-	}
 	port := os.Getenv("TODO_PORT")
 	if port == "" {
 		port = "7540"

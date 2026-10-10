@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -270,16 +271,72 @@ func deleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, struct{}{})
 }
-func signinHandler(w http.ResponseWriter, r *http.Request) {
 
+func signinHandler(w http.ResponseWriter, r *http.Request) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer r.Body.Close()
+
+	var pass Password
+	err = json.Unmarshal(body, &pass)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	passChecker := os.Getenv("TODO_PASSWORD")
+	if passChecker != pass.Password {
+		writeError(w, "Неверный пароль", http.StatusUnauthorized)
+		return
+	}
+	token, err := db.CreateToken(pass.Password)
+	if err != nil {
+		writeError(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	tokenCookie := Token{
+		Token: token,
+	}
+	writeJSON(w, tokenCookie)
 }
+
+func authMidlware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pass := os.Getenv("TODO_PASSWORD")
+		if len(pass) > 0 {
+			var jwt string
+			cookie, err := r.Cookie("token")
+			if err == nil {
+				jwt = cookie.Value
+			}
+			valid, err := db.ValidToken(jwt)
+			if err != nil {
+				writeError(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			if !valid {
+				writeError(w, "authorisation required", http.StatusUnauthorized)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func Init(r *chi.Mux) {
-	r.Post("api/signin", signinHandler)
+	r.Post("/api/signin", signinHandler)
 	r.Get("/api/nextdate", nextDayHandler)
-	r.Post("/api/task", addTaskHandler)
-	r.Get("/api/tasks", tasksHandler)
-	r.Get("/api/task", taskIdHandler)
-	r.Put("/api/task", updateTaskHandler)
-	r.Post("/api/task/done", doneTaskHandler)
-	r.Delete("/api/task", deleteTaskHandler)
+	r.Group(func(r chi.Router) {
+		r.Use(authMidlware)
+
+		r.Post("/api/task", addTaskHandler)
+		r.Get("/api/tasks", tasksHandler)
+		r.Get("/api/task", taskIdHandler)
+		r.Put("/api/task", updateTaskHandler)
+		r.Post("/api/task/done", doneTaskHandler)
+		r.Delete("/api/task", deleteTaskHandler)
+	})
+
 }
